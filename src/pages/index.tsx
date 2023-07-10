@@ -6,13 +6,25 @@ import relativeTime from "dayjs/plugin/relativeTime";
 import type { RouterOutputs } from "~/utils/api";
 import Image from "next/image";
 import { LoadingPage } from "~/components/loading";
+import { useState } from "react";
 
 dayjs.extend(relativeTime);
 
 const CreatePostWizard = () => {
   const { user } = useUser();
   if (!user) return null;
-  console.log(user);
+
+  const [input, setInput] = useState<string>("");
+
+  const ctx = api.useContext();
+
+  const { mutate, isLoading: isPosting } = api.posts.create.useMutation({
+    onSuccess: () => {
+      setInput("");
+      void ctx.posts.getAll.invalidate();
+    },
+  });
+
   return (
     <div className="flex w-full gap-3">
       <Image
@@ -25,7 +37,16 @@ const CreatePostWizard = () => {
       <input
         placeholder="Enter an emoji..."
         className="grow bg-transparent outline-none"
+        onChange={(e) => setInput(e.target.value)}
+        disabled={isPosting}
+        value={input}
       />
+      <button
+        onClick={() => mutate({ content: input })}
+        className="rounded-md bg-blue-500 px-4 py-2 text-white"
+      >
+        Post
+      </button>
     </div>
   );
 };
@@ -51,7 +72,7 @@ const PostView = (props: PostWithUser) => {
             post.createdAt
           ).fromNow()} `}</span>
         </div>
-        <span>{post.content}</span>
+        <span className="text-xl">{post.content}</span>
       </div>
     </div>
   );
@@ -71,7 +92,7 @@ const Feed = () => {
 
   return (
     <div className="flex grow flex-col overflow-y-scroll">
-      {data?.map((fullPost) => (
+      {data.map((fullPost) => (
         <PostView {...fullPost} key={fullPost.post.id} />
       ))}
     </div>
